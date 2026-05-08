@@ -15,10 +15,10 @@ Whether you are a beginner looking to understand how modern AI pipelines work or
 This project is built using industry-standard tools:
 
 *   **Node.js**: The core runtime environment.
-*   **OpenAI (GPT-4o-mini & Text-Embedding-3-Small)**: The "Brain" of our system. It understands questions, routes them to the right database, and formats human-like responses.
+*   **OpenRouter (Gemini Models)**: The "Brain" of our system. It understands questions, routes them to the right database, and formats human-like responses using `google/gemini-3.1-flash-lite` and generates embeddings using `google/gemini-embedding-2-preview`.
 *   **Neo4j (Graph Database)**: The "Factual Memory." It stores hard facts (e.g., *Who directed Inception?*) as a network of connected nodes and relationships.
 *   **Pinecone (Vector Database)**: The "Vibe/Semantic Memory." It stores movie descriptions and themes as numbers, allowing us to find movies with similar feelings or plots.
-*   **LangChain**: The framework used to orchestrate the communication between our app and OpenAI.
+*   **LangChain**: The framework used to orchestrate the communication between our app and OpenRouter.
 
 ---
 
@@ -30,7 +30,7 @@ How does the magic happen? Here is the complete flow of data from ingestion to q
 Before the AI can answer questions, we must feed it data.
 1.  **Parse Data:** We read the raw `movies.csv` file.
 2.  **Graph Building:** We extract the Actors, Directors, Genres, and Movies, and map them together in **Neo4j** (e.g., `Actor -> ACTED_IN -> Movie`).
-3.  **Vector Building:** We take the plot, themes, and cast, turn them into an embedding (a list of 1536 numbers representing meaning), and store it in **Pinecone**.
+3.  **Vector Building:** We take the plot, themes, and cast, turn them into an embedding (a list of 3072 numbers representing meaning), and store it in **Pinecone**.
 
 ### 2. The Querying Flow (Answering Questions)
 When a user asks a question, the AI must decide how to answer it.
@@ -61,18 +61,18 @@ graph TD;
 Every file in this project has a specific, focused purpose. Here is the breakdown:
 
 ### Configuration
-*   **`2_config.js`**: Centralized setup. Initializes the connections to Neo4j, Pinecone, and OpenAI. If an API key changes, you only change it here.
+*   **`2_config.js`**: Centralized setup. Initializes the connections to Neo4j, Pinecone, and OpenRouter. If an API key changes, you only change it here.
 
 ### Data Ingestion Pipeline (Run once)
 *   **`4_entityExtractor.js`**: Parses the raw `movies.csv` file locally. It extracts structured JSON data (title, year, cast, crew, genres) without needing an AI, making it extremely fast.
 *   **`5_graphBuilder.js`**: Takes the JSON from step 4 and uploads it to Neo4j. It creates `(Person)-[:DIRECTED]->(Movie)` relationships.
-*   **`6_vectorStore.js`**: Takes the JSON from step 4, converts the text into 1536-dimensional vectors using OpenAI, and uploads them to Pinecone.
+*   **`6_vectorStore.js`**: Takes the JSON from step 4, converts the text into 3072-dimensional vectors using OpenRouter, and uploads them to Pinecone.
 *   **`7_runIndexing.js`**: The orchestrator. It runs scripts 4, 5, and 6 in perfect sequence.
 
 ### Query Pipeline (Run continually)
 *   **`10_queryPlanner.js`**: The "Traffic Cop". It reads the user's question and classifies it as either a `factual` query or a `similarity` query.
-*   **`11_factualHandler.js`**: Handles exact questions. It asks OpenAI to translate the English question into a Neo4j Cypher query, runs it, and formats the result.
-*   **`12_similarityHandler.js`**: Handles recommendation questions. It searches Pinecone for the top 50 closest matches, then uses OpenAI to filter and explain the top 10 best recommendations.
+*   **`11_factualHandler.js`**: Handles exact questions. It asks OpenRouter to translate the English question into a Neo4j Cypher query, runs it, and formats the result.
+*   **`12_similarityHandler.js`**: Handles recommendation questions. It searches Pinecone for the top 50 closest matches, then uses OpenRouter to filter and explain the top 10 best recommendations.
 *   **`13_runQuery.js`**: The interactive chat interface in your terminal. It loops continuously, asking for your input and triggering script 10.
 
 ### Utilities

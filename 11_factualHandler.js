@@ -3,10 +3,10 @@
 // =====================================================================
 //
 // Flow:
-// 1. User question → Gemini → JSON plan
+// 1. User question → OpenAI → JSON plan
 // 2. JSON plan → Template system → safe Cypher
 // 3. Safe Cypher → Neo4j (READ ONLY) → raw data
-// 4. Raw data → Gemini → natural language answer
+// 4. Raw data → OpenAI → natural language answer
 // =====================================================================
 
 import { driver, llm } from "./2_config.js";
@@ -66,10 +66,9 @@ ${records.length > 50 ? `\n... and ${records.length - 50} more results` : ""}`;
 
   const response = await llm.invoke([{ role: "human", content: responsePrompt }]);
 
-  // LangChain with thinking models may return array of blocks or string
+  // LangChain responses
   let answer = response.content;
   if (Array.isArray(answer)) {
-    // Filter out thinking blocks, keep only text blocks
     answer = answer
       .filter((block) => typeof block === "string" || block.type === "text")
       .map((block) => (typeof block === "string" ? block : block.text))

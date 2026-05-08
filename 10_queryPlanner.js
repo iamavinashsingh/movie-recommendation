@@ -65,7 +65,6 @@ async function createQueryPlan(query) {
   ]);
 
   let raw = response.content;
-  // Gemini 2.5 thinking models return array: [{type:"thinking",...}, {type:"text", text:"..."}]
   if (Array.isArray(raw)) {
     raw = raw
       .filter((block) => typeof block === "string" || block.type === "text")

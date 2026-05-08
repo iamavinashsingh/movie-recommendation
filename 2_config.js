@@ -14,8 +14,7 @@
 import dotenv from "dotenv";
 import neo4j from "neo4j-driver";
 import { Pinecone } from "@pinecone-database/pinecone";
-import { ChatOpenAI } from "@langchain/openai";
-import { OpenAIEmbeddings } from "@langchain/openai";
+import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
 
 // Load .env file → puts values into process.env
 dotenv.config();
@@ -35,28 +34,20 @@ const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
 const pineconeIndex = pinecone.index(process.env.PINECONE_INDEX_NAME);
 
 // =====================================================================
-// 3. OPENROUTER LLM (via LangChain's OpenAI wrapper)
+// 3. GOOGLE GEMINI LLM (Free Tier)
 // =====================================================================
-const llm = new ChatOpenAI({
-  modelName: "google/gemini-3.1-flash-lite",
-  apiKey: process.env.OPENROUTER_API_KEY,
-  configuration: {
-    baseURL: "https://openrouter.ai/api/v1",
-  },
+const llm = new ChatGoogleGenerativeAI({
+  model: "gemini-2.5-flash", // Fast, highly capable, free tier available
+  apiKey: process.env.GEMINI_API_KEY,
   temperature: 0,
 });
 
 // =====================================================================
-// 4. OPENROUTER EMBEDDINGS (via LangChain's OpenAI wrapper)
+// 4. GOOGLE GEMINI EMBEDDINGS (Free Tier)
 // =====================================================================
-// google/gemini-embedding-2-preview
-const embeddings = new OpenAIEmbeddings({
-  apiKey: process.env.OPENROUTER_API_KEY,
-  modelName: "google/gemini-embedding-2-preview",
-  dimensions: 3072, // Force output to 3072 dimensions
-  configuration: {
-    baseURL: "https://openrouter.ai/api/v1",
-  },
+const embeddings = new GoogleGenerativeAIEmbeddings({
+  model: "text-embedding-004", // Outputs exactly 768 dimensions
+  apiKey: process.env.GEMINI_API_KEY,
 });
 
 // Embed ONE text

@@ -7,11 +7,11 @@
 // It does NOT: "Who directed this?" ❌ (that's Neo4j's job)
 //
 // How embeddings work:
-//   Text → OpenRouter → [0.3, 0.8, 0.1, ...] (3072 numbers)
+//   Text → Gemini → [0.3, 0.8, 0.1, ...] (768 numbers)
 //   Similar texts → similar numbers → close in space
 //
 // Each movie becomes one vector with metadata in Pinecone.
-// Pinecone index must have: dimensions=3072, metric=cosine
+// Pinecone index must have: dimensions=768, metric=cosine
 // =====================================================================
 
 import { embedTexts, pineconeIndex } from "./2_config.js";
@@ -47,7 +47,7 @@ async function buildVectorStore(entities) {
     // Create clean texts
     const texts = batch.map((entity) => createEmbeddingText(entity));
 
-    // Get vectors from OpenRouter
+    // Get vectors from Gemini
     const vectors = await embedTexts(texts);
 
     // Prepare Pinecone records

@@ -9,6 +9,8 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
+
+
 // Dedicated API endpoint for the frontend
 app.post('/api/query', async (req, res) => {
   const { query } = req.body;

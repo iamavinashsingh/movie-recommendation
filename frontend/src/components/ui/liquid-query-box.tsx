@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Search, Loader2, Film, Star } from "lucide-react";
+import { Search, Loader2, Star, Sparkles } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 // The SVG filter that creates the physical glass distortion
@@ -56,14 +56,17 @@ export function LiquidQueryBox({ className }: { className?: string }) {
   const [query, setQuery] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const [results, setResults] = useState<MovieResult[] | null>(null);
+  const [textAnswer, setTextAnswer] = useState<string | null>(null);
+  const [classification, setClassification] = useState<string | null>(null);
 
-  // Simulated backend call to LangGraph / Pinecone
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!query.trim()) return;
 
     setIsLoading(true);
     setResults(null);
+    setTextAnswer(null);
+    setClassification(null);
 
     try {
       const res = await fetch("/api/query", {
@@ -73,6 +76,13 @@ export function LiquidQueryBox({ className }: { className?: string }) {
       });
       const data = await res.json();
       
+      if (data.text) {
+        setTextAnswer(data.text);
+      }
+      if (data.classification) {
+        setClassification(data.classification);
+      }
+      
       if (data.results && data.results.length > 0) {
         setResults(data.results.slice(0, 10)); // Show top 10 for the UI grid
       } else {
@@ -81,16 +91,19 @@ export function LiquidQueryBox({ className }: { className?: string }) {
     } catch (error) {
       console.error("Error fetching recommendations:", error);
       setResults([]);
+      setTextAnswer("Failed to query the Serverless AI backend. Check your terminal logs or env config.");
     } finally {
       setIsLoading(false);
     }
   };
 
+  const hasContent = (results && results.length > 0) || textAnswer;
+
   return (
     <div
       className={cn(
         "relative mx-auto transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
-        results ? "w-full max-w-5xl" : "w-full max-w-2xl",
+        hasContent ? "w-full max-w-5xl" : "w-full max-w-2xl",
         className
       )}
     >
@@ -133,56 +146,77 @@ export function LiquidQueryBox({ className }: { className?: string }) {
           </button>
         </form>
 
-        {/* Results Area (Reveals organically) */}
+        {/* AI Answer & Movie Results Area */}
         <div
           className={cn(
             "grid transition-all duration-700 ease-[cubic-bezier(0.16,1,0.3,1)]",
-            results ? "mt-8 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
+            hasContent ? "mt-8 grid-rows-[1fr] opacity-100" : "grid-rows-[0fr] opacity-0"
           )}
         >
-          <div className="overflow-hidden">
-            <h3 className="mb-4 text-xl font-medium tracking-tight text-white/90">
-              Top Matches for your graph query
-            </h3>
-            <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-              {results?.map((movie) => (
-                <div
-                  key={movie.id}
-                  className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-black/40 p-5 transition-all hover:bg-black/60 border border-white/5"
-                >
-                  <div className="flex items-start justify-between mb-4">
-                    <div>
-                      <h4 className="font-semibold text-white text-lg leading-tight">{movie.title}</h4>
-                      <p className="text-sm text-white/60 mt-1">{movie.year} • {movie.director}</p>
-                    </div>
-                    <div className="flex shrink-0 items-center gap-1 rounded-full bg-blue-500/20 px-2.5 py-1 text-xs font-medium text-blue-200">
-                      <Star className="h-3 w-3 fill-current" />
-                      {movie.match}
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-3 mt-auto">
-                    {movie.genres && (
-                      <div className="text-xs text-white/70">
-                        <span className="font-semibold text-white/90">Genres:</span> {movie.genres}
-                      </div>
-                    )}
-                    {movie.actors && (
-                      <div className="text-xs text-white/70 line-clamp-2">
-                        <span className="font-semibold text-white/90">Cast:</span> {movie.actors}
-                      </div>
-                    )}
-                    {movie.themes && (
-                      <div className="text-xs text-white/70 line-clamp-2">
-                        <span className="font-semibold text-white/90">Themes:</span> {movie.themes}
-                      </div>
-                    )}
-                  </div>
+          <div className="overflow-hidden space-y-6">
+            
+            {/* Glassmorphic AI Text Answer Box */}
+            {textAnswer && (
+              <div className="relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 p-5 md:p-6 shadow-2xl backdrop-blur-md transition-all duration-500 hover:bg-white/10">
+                <div className="flex items-center gap-2 mb-3 text-blue-400 font-semibold tracking-wider text-xs uppercase">
+                  <Sparkles className="h-4 w-4 animate-pulse" />
+                  <span>AI GraphRAG Answer {classification ? `(${classification})` : ""}</span>
                 </div>
-              ))}
-            </div>
+                <p className="text-white/95 text-base md:text-lg leading-relaxed whitespace-pre-line font-light drop-shadow-sm">
+                  {textAnswer}
+                </p>
+              </div>
+            )}
+
+            {/* Movie Card Grid */}
+            {results && results.length > 0 && (
+              <div>
+                <h3 className="mb-4 text-xl font-medium tracking-tight text-white/90">
+                  Top Matches for your graph query
+                </h3>
+                <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+                  {results.map((movie) => (
+                    <div
+                      key={movie.id}
+                      className="group relative flex cursor-pointer flex-col overflow-hidden rounded-2xl bg-black/40 p-5 transition-all hover:bg-black/60 border border-white/5"
+                    >
+                      <div className="flex items-start justify-between mb-4">
+                        <div>
+                          <h4 className="font-semibold text-white text-lg leading-tight">{movie.title}</h4>
+                          <p className="text-sm text-white/60 mt-1">{movie.year} • {movie.director}</p>
+                        </div>
+                        <div className="flex shrink-0 items-center gap-1 rounded-full bg-blue-500/20 px-2.5 py-1 text-xs font-medium text-blue-200">
+                          <Star className="h-3 w-3 fill-current" />
+                          {movie.match}
+                        </div>
+                      </div>
+                      
+                      <div className="space-y-3 mt-auto">
+                        {movie.genres && (
+                          <div className="text-xs text-white/70">
+                            <span className="font-semibold text-white/90">Genres:</span> {movie.genres}
+                          </div>
+                        )}
+                        {movie.actors && (
+                          <div className="text-xs text-white/70 line-clamp-2">
+                            <span className="font-semibold text-white/90">Cast:</span> {movie.actors}
+                          </div>
+                        )}
+                        {movie.themes && (
+                          <div className="text-xs text-white/70 line-clamp-2">
+                            <span className="font-semibold text-white/90">Themes:</span> {movie.themes}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
           </div>
         </div>
+
       </div>
     </div>
   );

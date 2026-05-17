@@ -1,158 +1,253 @@
-# 🎬 AI-Powered Movie Recommendation System (GraphRAG)
+# 🎬 GraphRAG Movie Knowledge Engine & Recommendation System
 
-Welcome to the **Hybrid GraphRAG Movie Knowledge Engine**! 
+[![Tech Stack](https://img.shields.io/badge/Stack-Next.js%20%7C%20LangChain%20%7C%20Neo4j%20%7C%20Pinecone-blueviolet?style=for-the-badge)](https://github.com/iamavinashsingh/movie-recommendation)
+[![License: MIT](https://img.shields.io/badge/License-MIT-green.svg?style=for-the-badge)](https://opensource.org/licenses/MIT)
+[![Deploy to Vercel](https://img.shields.io/badge/Deploy%20to-Vercel-black?style=for-the-badge&logo=vercel)](https://vercel.com)
 
-This project is a state-of-the-art, AI-driven movie recommendation and querying system. It is designed to act as an intelligent movie expert that can answer complex questions, recommend movies based on specific vibes, and retrieve hard facts. 
+Welcome to the **Hybrid GraphRAG Movie Knowledge Engine**! This is a state-of-the-art, production-grade hybrid RAG (Retrieval-Augmented Generation) application combining the semantic intuition of **Vector Databases (Pinecone)** with the bulletproof relational facts of **Graph Databases (Neo4j)**.
 
-To achieve this, the system uses a cutting-edge AI architecture known as **Hybrid RAG (Retrieval-Augmented Generation)**. By combining the reasoning power of an LLM, the exact precision of a Graph Database, and the semantic understanding of a Vector Database, we eliminate AI hallucinations and provide lightning-fast, accurate answers.
-
-Whether you are a beginner looking to understand how modern AI pipelines work or a professional looking for a robust architecture template, this guide will explain everything in the simplest way possible.
-
----
-
-## 🛠️ Tech Stack
-
-This project is built using industry-standard tools:
-
-*   **Node.js**: The core runtime environment.
-*   **OpenRouter (Free LLM)**: The "Brain" of our system. It uses `openrouter/free` to handle chat and query logic.
-*   **Hugging Face (Free Embeddings)**: The "Vibe Memory." It uses the `SeanLee97/mxbai-embed-large-v1-nli-matryoshka` model to generate high-quality **3072-dimensional** vectors for free.
-*   **Neo4j (Graph Database)**: The "Factual Memory." It stores hard facts as connected nodes.
-*   **Pinecone (Vector Database)**: Stores the 3072-dimensional vectors for semantic search.
-*   **LangChain**: The framework used to orchestrate the system.
+By leveraging an LLM as a dynamic **Query Classifier** and **Traffic Cop**, the engine routes questions to the optimal database, synthesis engine, or custom multi-hop pipeline. This architectural synergy completely eliminates LLM hallucinations, allowing you to ask everything from complex relational graph questions (e.g., *"Who directed the movie Inception?"*) to fuzzy theme-based vibe searches (e.g., *"Show me surreal movies similar to Interstellar about space travel"*).
 
 ---
 
-## 🚀 The Architecture & Full Flow
+## 🧭 The Core Architecture & Data Flow
 
-How does the magic happen? Here is the complete flow of data from ingestion to querying.
+Standard RAG architectures rely strictly on vector similarity, which routinely fails at:
+- **Relational queries:** *"What movies has Leonardo DiCaprio starred in that were directed by Christopher Nolan?"*
+- **Aggregation queries:** *"How many sci-fi movies do we have in our database?"*
+- **Entity Summarization:** *"Tell me about James Cameron's directing style."*
 
-### 1. The Indexing Flow (Building the Brain)
-Before the AI can answer questions, we must feed it data.
-1.  **Parse Data:** We read the raw `movies.csv` file.
-2.  **Graph Building:** We extract the Actors, Directors, Genres, and Movies, and map them together in **Neo4j** (e.g., `Actor -> ACTED_IN -> Movie`).
-3.  **Vector Building:** We take the plot, themes, and cast, turn them into an embedding (a list of 3072 numbers representing meaning), and store it in **Pinecone**.
-
-### 2. The Querying Flow (Answering Questions)
-When a user asks a question, the AI must decide how to answer it.
+Our **Hybrid GraphRAG** addresses this by partitioning knowledge representation into two parallel memories, integrated via a smart **Query Routing & Reasoning Layer**:
 
 ```mermaid
 graph TD;
-    User[User Asks Question] --> Planner{Query Planner LLM};
+    User[User Inputs Query] --> Classifier{Query Classifier LLM};
     
-    Planner -->|Question is about facts \n 'Who directed Interstellar?'| Factual[Factual Route];
-    Planner -->|Question is about similarity \n 'Movies like Avatar'| Semantic[Semantic Route];
+    %% ROUTE A: FACTUAL (Neo4j)
+    Classifier -->|1. Factual Route| Factual[10_queryPlanner.js];
+    Factual --> Plan[Generate JSON Query Plan];
+    Plan --> SafeCypher[8_cypherTemplates.js: Safe Cypher Builder];
+    SafeCypher --> Neo4j[(Neo4j Graph DB)];
+    Neo4j -->|Structured Relational Subgraph| FinalLLM[LLM Synthesis & Response Formatter];
     
-    Factual --> Cypher[LLM generates Cypher Query];
-    Cypher --> Neo4j[(Neo4j Graph DB)];
-    Neo4j -->|Returns Exact Facts| FinalLLM[LLM Formats Final Answer];
-    
-    Semantic --> Embed[Embed the Question into Vectors];
+    %% ROUTE B: SIMILARITY (Pinecone)
+    Classifier -->|2. Similarity Route| Semantic[12_similarityHandler.js];
+    Semantic --> Embed[Embed query via Hugging Face];
     Embed --> Pinecone[(Pinecone Vector DB)];
-    Pinecone -->|Returns Top 50 Similar Movies| Ranker[LLM Ranks Top 10];
+    Pinecone -->|Top 15 Mathematical Matches| Ranker[LLM Intelligent Semantic Re-ranker];
     Ranker --> FinalLLM;
     
-    FinalLLM --> Output[Output to User];
+    %% ROUTE C: DESCRIPTIVE (Pinecone + LLM Metadata Synthesis)
+    Classifier -->|3. Descriptive Route| Descriptive[14_descriptiveHandler.js];
+    Descriptive --> EmbedEntity[Embed Entity Name];
+    EmbedEntity --> PineconeBio[(Pinecone Vector DB)];
+    PineconeBio -->|Rich Entity Context & Credits| ContextSynthesizer[LLM Bio Synthesizer];
+    ContextSynthesizer --> FinalLLM;
+    
+    FinalLLM --> Output[Natural Language Output to User];
 ```
+
+---
+
+## 🛠️ The Technology Stack
+
+This system is built using modern, industry-standard technologies optimized for speed, reliability, and deployment flexibility:
+
+*   **Frameworks & Orchestration:**
+    *   [Next.js 16/19](https://nextjs.org/) (Frontend Interface & Serverless API Routes)
+    *   [LangChain.js](https://js.langchain.com/) (AI pipeline architecture, prompt chaining, and memory structures)
+*   **Databases (The Hybrid Layer):**
+    *   [Neo4j Graph Database](https://neo4j.com/) (Factual relational graph storing interconnected nodes: `Movie`, `Actor`, `Director`, `Genre`, `Theme`, `Award`)
+    *   [Pinecone Vector Database](https://www.pinecone.io/) (Storing high-dimensional semantic vectors of movie plots, themes, and descriptive context)
+*   **AI Models & Processing Engine:**
+    *   [OpenRouter LLM (Free Tier)](https://openrouter.ai/) (Utilizing free-tier LLMs as the natural language generation brain and decision planner)
+    *   [Hugging Face Inference](https://huggingface.co/) (Using the top-ranked `mixedbread-ai/mxbai-embed-large-v1` embedding model to generate high-quality **1024-dimensional** vectors)
+*   **Backend Runtime:**
+    *   [Node.js](https://nodejs.org/) (ES Modules configuration for scripting, ingestion, and local query execution)
 
 ---
 
 ## 📂 Project Folder Structure
 
-Every file in this project has a specific, focused purpose. Here is the breakdown:
+The project is clean, modular, and separates data ingestion pipelines from Next.js serverless execution contexts:
 
-### Configuration
-*   **`2_config.js`**: Centralized setup. Initializes the connections to Neo4j, Pinecone, and OpenRouter. If an API key changes, you only change it here.
-
-### Data Ingestion Pipeline (Run once)
-*   **`4_entityExtractor.js`**: Parses the raw `movies.csv` file locally. It extracts structured JSON data (title, year, cast, crew, genres) without needing an AI, making it extremely fast.
-*   **`5_graphBuilder.js`**: Takes the JSON from step 4 and uploads it to Neo4j. It creates `(Person)-[:DIRECTED]->(Movie)` relationships.
-*   **`6_vectorStore.js`**: Takes the JSON from step 4, converts the text into 3072-dimensional vectors using OpenRouter, and uploads them to Pinecone.
-*   **`7_runIndexing.js`**: The orchestrator. It runs scripts 4, 5, and 6 in perfect sequence.
-
-### Query Pipeline (Run continually)
-*   **`10_queryPlanner.js`**: The "Traffic Cop". It reads the user's question and classifies it as either a `factual` query or a `similarity` query.
-*   **`11_factualHandler.js`**: Handles exact questions. It asks OpenRouter to translate the English question into a Neo4j Cypher query, runs it, and formats the result.
-*   **`12_similarityHandler.js`**: Handles recommendation questions. It searches Pinecone for the top 50 closest matches, then uses OpenRouter to filter and explain the top 10 best recommendations.
-*   **`13_runQuery.js`**: The interactive chat interface in your terminal. It loops continuously, asking for your input and triggering script 10.
-
-### Utilities
-*   **`1_testConnection.js`**: A simple diagnostic tool to ensure your `.env` keys are valid and databases are reachable.
+```text
+movie/
+├── backend/                       # Local Command-line scripts & Ingestion Pipeline
+│   ├── Data/                      # Seed dataset folder
+│   │   └── movies.csv             # Raw movie database (Titles, Cast, Crew, Plots)
+│   ├── 1_testConnection.js        # Diagnoses credentials & ensures database connections
+│   ├── 2_config.js                # Centralized initialization (Lazy clients for safety)
+│   ├── 4_entityExtractor.js       # Local CSV parser & structured JSON extractor
+│   ├── 5_graphBuilder.js          # Direct Cypher transactional uploader to Neo4j
+│   ├── 6_vectorStore.js           # Batch embeds plots and stores vectors in Pinecone
+│   ├── 7_runIndexing.js           # Ingestion Master Orchestrator (executes 4, 5 & 6)
+│   ├── 8_cypherTemplates.js       # Safe Cypher translator (Whitelist-validated DB queries)
+│   ├── 9_queryClassifier.js       # Structured JSON LLM router (Factual vs Similarity vs Descriptive)
+│   ├── 10_queryPlanner.js         # Evaluator for structured factual traversal plans
+│   ├── 11_factualHandler.js       # Executes Neo4j RAG pipeline
+│   ├── 12_similarityHandler.js    # Executes Pinecone vector RAG and smart LLM ranking
+│   ├── 13_runQuery.js             # Local CLI Interactive Chat Mode
+│   ├── 14_descriptiveHandler.js   # Rich contextual lookups for entities & biographies
+│   └── package.json               # Backend dependencies (express, cors, csv-parser, dotenv)
+│
+├── frontend/                      # Next.js Serverless Web Application
+│   ├── public/                    # Static assets
+│   ├── src/
+│   │   ├── app/
+│   │   │   ├── api/query/route.js # Serverless endpoint interfacing frontend and backend
+│   │   │   ├── layout.tsx         # Next.js app root layout
+│   │   │   └── page.tsx           # Premium, glassmorphic reactive user interface
+│   │   ├── components/            # UI components (Movie card grid, responsive inputs)
+│   │   └── lib/
+│   │       ├── utils.ts           # Class merging utilities (tailwind-merge, clsx)
+│   │       └── backend/           # Synced backend logic (identical configurations & handlers)
+│   ├── next.config.ts             # Serverless-optimized external bundler settings
+│   ├── package.json               # Frontend dependencies & Next/React definitions
+│   └── tsconfig.json              # TypeScript compilation guidelines
+│
+├── ReadMe.md                      # This detailed manual
+└── .env                           # Local secrets & API connections (Gitignored)
+```
 
 ---
 
-## 🧠 How the Project Works (Deep Dive)
+## 🔒 Security-First Cypher Generation
 
-### Why Two Databases?
-A common problem with AI is hallucinations—making things up. 
-If you use *only* a Vector Database, and ask "Who directed Inception?", the database might return Christopher Nolan, but it might also return Leonardo DiCaprio simply because his name appears often in the same text. 
-By using **Neo4j (Graph DB)**, we get 100% factual accuracy for hard data. By using **Pinecone (Vector DB)**, we get incredible "fuzzy matching" for recommendations. Combining them creates the ultimate engine.
+A critical security risk in standard LLM-to-Graph databases is **SQL/Cypher Injection** — an LLM writing destructive commands (`SET`, `DELETE`, `DETACH`) that get executed on the DB. 
 
-### The Query Planner
-The beauty of this system is in `10_queryPlanner.js`. It uses a concept called **Function Calling** or structured output. The LLM is forced to output a JSON object: `{"type": "factual"}` or `{"type": "similarity"}`. This allows our code to programmatically route the user's request to the correct handler script.
+This engine implements **Safe Cypher Ingestion** via `8_cypherTemplates.js`:
+1. The LLM **never** writes raw Cypher queries. It only generates a structured, high-level JSON *Query Plan* (e.g. `{"type": "traversal", "from": "Director", "to": "Movie", "rel": "DIRECTED"}`).
+2. The query builder validates the JSON parameters against a strict, secure **Whitelist** of Node Labels, Relationships, Properties, and Comparison Operators.
+3. Only if all validations pass, the system dynamically reconstructs safe, parameterized, read-only Cypher statements (`MATCH`, `WHERE`, `RETURN`) under a strict read-only transaction context.
 
 ---
 
-## 💻 Prerequisites & Setup
+## 🧠 Smart Pipeline Routing (The 3 Engines)
 
-Before you start, you will need a few free accounts:
+When a query is entered, `9_queryClassifier.js` dynamically routes it to one of three micro-engines:
 
-1. **Node.js** installed on your computer.
-2. **OpenRouter & Hugging Face Accounts:** You need free API Keys from openrouter.ai and huggingface.co.
-3. **Neo4j AuraDB:** Create a free cloud graph database. Save your URI, Username (`neo4j`), and Password.
-4. **Pinecone:** Create a free vector database. 
-   * **Crucial Step:** When creating your index, set the **Dimensions to 3072** and the **Metric to Cosine**.
+### 1. The Factual Engine (`11_factualHandler.js`)
+*   **Best for:** Specific relationship paths, counts, aggregations, and factual lookups.
+*   **Workflow:** User Query ➔ JSON Query Plan ➔ Safe Parameterized Cypher Builder ➔ Neo4j AuraDB read-only query ➔ LLM Natural Synthesis.
+*   *Example:* `"Who directed Interstellar?"` or `"Which movies won Best Picture in 2010?"`
 
-### Setup Instructions
+### 2. The Similarity Engine (`12_similarityHandler.js`)
+*   **Best for:** Recommendations, vibe matching, stylistic overlaps, and semantic topics.
+*   **Workflow:** Extract candidate movie ➔ Query Pinecone for Top 15 closest vector points ➔ Compile metadata (director, cast, genres, themes) ➔ Prompt LLM to re-rank the top 10 results intelligently based on nuance overlap (not just math score) and construct a personalized explanation for each recommendation.
+*   *Example:* `"Recommend movies like Inception but with more suspense"` or `"Show me dream-like science fiction movies."`
 
-**1. Install Dependencies**
+### 3. The Descriptive Engine (`14_descriptiveHandler.js`)
+*   **Best for:** Biography overviews, entity breakdowns, and thematic summaries.
+*   **Workflow:** Extract Entity Name ➔ Query Pinecone for matching entities ➔ Extract associated metadata ➔ LLM synthesizes an elaborate context-specific explanation of the creator or work.
+*   *Example:* `"Who is James Cameron?"` or `"What themes are explored in The Matrix?"`
+
+---
+
+## 💻 Local Setup & Installation
+
+### Prerequisites
+Make sure you have [Node.js (v18+)](https://nodejs.org/) installed and access to the following free cloud accounts:
+1. **Neo4j AuraDB:** Create a free instance [here](https://neo4j.com/cloud/platform/auradb/). Grab your `NEO4J_URI`, `NEO4J_USERNAME` (`neo4j`), and `NEO4J_PASSWORD`.
+2. **Pinecone:** Create a free vector index [here](https://www.pinecone.io/).
+   * **Crucial:** Build your index with **1024 Dimensions** and **Cosine** metric (to match `mixedbread-ai/mxbai-embed-large-v1`'s output).
+3. **OpenRouter:** Generate a free API Key at [openrouter.ai](https://openrouter.ai/).
+4. **Hugging Face:** Generate a free user access token in your Hugging Face settings under [huggingface.co/settings/tokens](https://huggingface.co/settings/tokens).
+
+### Configuration Step-by-Step
+
+**1. Clone the project and navigate to the project directory**
 ```bash
-npm install
+git clone https://github.com/iamavinashsingh/movie-recommendation.git
+cd movie-recommendation
 ```
 
 **2. Configure Environment Variables**
-Create a `.env` file in the root of the project and add your credentials:
+Create a `.env` file inside **both** the `/backend` folder and the `/frontend` folder containing:
+
 ```env
-# OpenRouter Credentials
-OPENROUTER_API_KEY=sk-or-v1-your_openrouter_api_key_here
+# OpenRouter API Key
+OPENROUTER_API_KEY=sk-or-v1-your_key_here
 
-# Hugging Face Token (for free embeddings)
-HUGGINGFACE_API_KEY=your_huggingface_token_here
+# Hugging Face Token (API Access)
+HUGGINGFACE_API_KEY=hf_your_token_here
 
-# Neo4j Graph Database
-NEO4J_URI=neo4j+s://your-database-id.databases.neo4j.io
+# Neo4j Graph Database Configuration
+NEO4J_URI=neo4j+s://your_db_id.databases.neo4j.io
 NEO4J_USERNAME=neo4j
-NEO4J_PASSWORD=your_neo4j_password_here
+NEO4J_PASSWORD=your_password_here
 
-# Pinecone Vector Database
-PINECONE_API_KEY=your_pinecone_api_key_here
-PINECONE_INDEX_NAME=your_index_name_here
+# Pinecone Vector Database Configuration
+PINECONE_API_KEY=your_pinecone_key_here
+PINECONE_INDEX_NAME=movie-embedding
 ```
 
 ---
 
-## ▶️ Running the Application
+## 🚀 Running the Data Ingestion (Indexing Phase)
 
-Follow these three steps in order:
+Before querying the AI, you must populate your cloud databases using the local ETL pipeline:
 
-**1. Test Your Connections**
-Ensure all your API keys and databases are connecting correctly.
+**1. Install Local Dependencies**
+```bash
+cd backend
+npm install
+```
+
+**2. Test Database Access**
+Make sure all your connections are correct and online before loading data:
 ```bash
 npm run test
 ```
 
-**2. Index the Data**
-This command reads the `movies.csv` file, builds the knowledge graph in Neo4j, and uploads the semantic embeddings to Pinecone. *(Only needs to be run once!)*
+**3. Run the Indexing Pipeline**
+Provide the raw CSV path to extract, generate vectors, build graph nodes, and index to Neo4j + Pinecone:
 ```bash
 npm run index -- ./Data/movies.csv
 ```
+*This script will parse the database, create actor/director relationships in Neo4j, and generate & upload 1024-dimensional embeddings into your Pinecone Index.*
 
-**3. Chat with the Engine!**
-Start the interactive chat interface:
+**4. Start CLI Chat Mode (Optional Terminal Query)**
+You can interact with your movie engine directly in the shell:
 ```bash
 npm run query
 ```
-**Example Questions to try:**
-*   *"Who directed the movie Inception?"* (Triggers Neo4j)
-*   *"I really loved Avatar, can you recommend me 5 similar movies?"* (Triggers Pinecone)
-*   *"Are there any sci-fi movies about space travel released after 2010?"* 
+
+---
+
+## 🌐 Running the Next.js Web App Locally
+
+Once indexed, launch the frontend to experience the gorgeous, responsive user interface:
+
+**1. Install Frontend Dependencies**
+```bash
+cd ../frontend
+npm install
+```
+
+**2. Start Development Server**
+```bash
+npm run dev
+```
+Open your browser at `http://localhost:3000` to start chatting with your RAG engine!
+
+---
+
+## ☁️ Deploying to Vercel (Production)
+
+The frontend and backend API endpoints are fully optimized for serverless hosting on [Vercel](https://vercel.com/):
+
+### Serverless Optimization Strategies Applied:
+*   **Lazy Instantiation (`2_config.js`):** Client initializers (`neo4j.driver`, `new Pinecone()`, `new ChatOpenAI()`) are wrapped in lazy getters using JavaScript `Proxy` singletons. This prevents compile-time crashes during Vercel's static analysis/build phase when no environment variables are loaded.
+*   **Externalized Bundler Packages (`next.config.ts`):** Heavy Node.js native dependencies (`neo4j-driver`, `@pinecone-database/pinecone`, `@huggingface/inference`) are excluded from Webpack bundling via `serverExternalPackages` so they run natively in production environments.
+
+### Deployment Instructions:
+1. Push your codebase to GitHub.
+2. Link your repository in the Vercel dashboard.
+3. Under **Project Settings ➔ Environment Variables**, input all the environment variables from your `.env` configuration file.
+4. Deploy! Vercel will automatically compile and serve the frontend while dynamically executing the api route `/api/query` in a fast, serverless runtime.
+
+---
+
+## 📄 License
+This project is open-source software licensed under the [MIT License](https://opensource.org/licenses/MIT). Feel free to customize and expand it for any AI/RAG-driven application!

@@ -15,10 +15,11 @@ Whether you are a beginner looking to understand how modern AI pipelines work or
 This project is built using industry-standard tools:
 
 *   **Node.js**: The core runtime environment.
-*   **Google Gemini (Free Tier)**: The "Brain" of our system. It understands questions, routes them to the right database, and formats human-like responses using `gemini-2.5-flash` and generates embeddings using `text-embedding-004`.
-*   **Neo4j (Graph Database)**: The "Factual Memory." It stores hard facts (e.g., *Who directed Inception?*) as a network of connected nodes and relationships.
-*   **Pinecone (Vector Database)**: The "Vibe/Semantic Memory." It stores movie descriptions and themes as numbers, allowing us to find movies with similar feelings or plots.
-*   **LangChain**: The framework used to orchestrate the communication between our app and Google Gemini.
+*   **OpenRouter (Free LLM)**: The "Brain" of our system. It uses `openrouter/free` to handle chat and query logic.
+*   **Hugging Face (Free Embeddings)**: The "Vibe Memory." It uses the `SeanLee97/mxbai-embed-large-v1-nli-matryoshka` model to generate high-quality **3072-dimensional** vectors for free.
+*   **Neo4j (Graph Database)**: The "Factual Memory." It stores hard facts as connected nodes.
+*   **Pinecone (Vector Database)**: Stores the 3072-dimensional vectors for semantic search.
+*   **LangChain**: The framework used to orchestrate the system.
 
 ---
 
@@ -97,10 +98,10 @@ The beauty of this system is in `10_queryPlanner.js`. It uses a concept called *
 Before you start, you will need a few free accounts:
 
 1. **Node.js** installed on your computer.
-2. **Google Gemini API Key:** You need a free API key from Google AI Studio. 
+2. **OpenRouter & Hugging Face Accounts:** You need free API Keys from openrouter.ai and huggingface.co.
 3. **Neo4j AuraDB:** Create a free cloud graph database. Save your URI, Username (`neo4j`), and Password.
 4. **Pinecone:** Create a free vector database. 
-   * **Crucial Step:** When creating your index, set the **Dimensions to 768** and the **Metric to Cosine**.
+   * **Crucial Step:** When creating your index, set the **Dimensions to 3072** and the **Metric to Cosine**.
 
 ### Setup Instructions
 
@@ -112,8 +113,11 @@ npm install
 **2. Configure Environment Variables**
 Create a `.env` file in the root of the project and add your credentials:
 ```env
-# Google Gemini (Free Tier)
-GEMINI_API_KEY=your_gemini_api_key_here
+# OpenRouter Credentials
+OPENROUTER_API_KEY=sk-or-v1-your_openrouter_api_key_here
+
+# Hugging Face Token (for free embeddings)
+HUGGINGFACE_API_KEY=your_huggingface_token_here
 
 # Neo4j Graph Database
 NEO4J_URI=neo4j+s://your-database-id.databases.neo4j.io

@@ -2,21 +2,23 @@
 // 2_config.js — ALL CONNECTIONS IN ONE PLACE
 // =====================================================================
 //
-// This file sets up 3 connections:
-//   1. Neo4j     → Graph Database (stores facts + relationships)
-//   2. Pinecone  → Vector Database (stores embeddings for similarity)
-//   3. OpenAI LLM → Language Model & Embeddings
+// This file sets up 4 connections:
+//   1. Neo4j       → Graph Database (stores facts + relationships)
+//   2. Pinecone    → Vector Database (stores embeddings for similarity)
+//   3. OpenRouter  → LLM (free tier chat model)
+//   4. Hugging Face → Embeddings (free, 1024 dimensions)
+//
+// Model: mixedbread-ai/mxbai-embed-large-v1 (1024 dims, top-ranked free model)
+// Pinecone index must be set to: dimensions=1024, metric=cosine
 //
 // Every other file imports from THIS file.
-// If a key changes, you change it in ONE place.
 // =====================================================================
 
 import dotenv from "dotenv";
 import neo4j from "neo4j-driver";
 import { Pinecone } from "@pinecone-database/pinecone";
-import { ChatGoogleGenerativeAI, GoogleGenerativeAIEmbeddings } from "@langchain/google-genai";
+import { ChatOpenAI } from "@langchain/openai";
 
-// Load .env file → puts values into process.env
 dotenv.config();
 
 // =====================================================================
@@ -34,34 +36,71 @@ const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
 const pineconeIndex = pinecone.index(process.env.PINECONE_INDEX_NAME);
 
 // =====================================================================
-// 3. GOOGLE GEMINI LLM (Free Tier)
+// 3. OPENROUTER LLM (Free Tier)
 // =====================================================================
-const llm = new ChatGoogleGenerativeAI({
-  model: "gemini-2.5-flash", // Fast, highly capable, free tier available
-  apiKey: process.env.GEMINI_API_KEY,
+const llm = new ChatOpenAI({
+  modelName: "openrouter/free",
+  apiKey: process.env.OPENROUTER_API_KEY,
+  configuration: {
+    baseURL: "https://openrouter.ai/api/v1",
+  },
   temperature: 0,
 });
 
 // =====================================================================
-// 4. GOOGLE GEMINI EMBEDDINGS (Free Tier)
+// 4. HUGGING FACE EMBEDDINGS (Free Tier - 1024 Dimensions)
 // =====================================================================
-const embeddings = new GoogleGenerativeAIEmbeddings({
-  model: "text-embedding-004", // Outputs exactly 768 dimensions
-  apiKey: process.env.GEMINI_API_KEY,
-});
+// Using the new HF Router endpoint (replaces the old api-inference URL)
+const EMBEDDING_MODEL = "mixedbread-ai/mxbai-embed-large-v1";
+const HF_ROUTER_URL = `https://router.huggingface.co/hf-inference/models/${EMBEDDING_MODEL}/pipeline/feature-extraction`;
 
-// Embed ONE text
+/**
+ * Embed a single string.
+ * Returns a plain JS array of 1024 numbers.
+ */
 async function embedText(text) {
-  const [vector] = await embeddings.embedDocuments([text]);
-  return vector;
+  const response = await fetch(HF_ROUTER_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ inputs: text }),
+  });
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`HuggingFace error ${response.status}: ${err}`);
+  }
+  const data = await response.json();
+  // Single input returns an array of 1024 numbers directly
+  return Array.isArray(data[0]) ? data[0] : data;
 }
 
-// Embed MULTIPLE texts
+/**
+ * Embed multiple strings (batch).
+ * Returns an array of 1024-dim vectors.
+ */
 async function embedTexts(texts) {
-  return await embeddings.embedDocuments(texts);
+  const response = await fetch(HF_ROUTER_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${process.env.HUGGINGFACE_API_KEY}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({ inputs: texts }),
+  });
+  if (!response.ok) {
+    const err = await response.text();
+    throw new Error(`HuggingFace error ${response.status}: ${err}`);
+  }
+  const data = await response.json();
+  // Batch input returns array of arrays
+  return data;
 }
 
-// Close all connections when done
+// =====================================================================
+// CLEANUP
+// =====================================================================
 async function closeConnections() {
   await driver.close();
   console.log("✅ All connections closed.");

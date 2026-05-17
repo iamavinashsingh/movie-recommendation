@@ -44,8 +44,7 @@ async function extractAllEntities(csvPath) {
     fs.createReadStream(csvPath)
       .pipe(csv())
       .on("data", (data) => {
-        // Limit to 1000 movies to keep index size manageable (same as old code)
-        if (count >= 1000) return;
+        // Process all movies in the CSV file
 
         try {
           const title = data.title || data.original_title;

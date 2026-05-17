@@ -14,7 +14,7 @@ import { buildGraph } from "./5_graphBuilder.js";
 import { buildVectorStore } from "./6_vectorStore.js";
 import { closeConnections } from "./2_config.js";
 
-async function runIndexing(csvPath) {
+async function runIndexing(csvPath, limit = null) {
   console.log("===========================================");
   console.log("   🎬 GraphRAG Indexing Pipeline");
   console.log("===========================================\n");
@@ -24,7 +24,12 @@ async function runIndexing(csvPath) {
   try {
     // ── STEP 1: Parse CSV ──
     console.log("── STEP 1: Extracting Entities (Local CSV Parse) ──");
-    const entities = await extractAllEntities(csvPath);
+    let entities = await extractAllEntities(csvPath);
+
+    if (limit && limit > 0) {
+      console.log(`   ⚠️ Slicing entities to the first ${limit} movies for testing...`);
+      entities = entities.slice(0, limit);
+    }
 
     // ── STEP 2: Build Neo4j Graph ──
     console.log("\n── STEP 2: Building Graph (Neo4j) ──");
@@ -47,10 +52,12 @@ async function runIndexing(csvPath) {
 }
 
 const csvPath = process.argv[2] || './Data/movies.csv';
+const limit = process.argv[3] ? parseInt(process.argv[3]) : null;
+
 if (!csvPath) {
-  console.error("Usage: node 7_runIndexing.js <path-to-csv>");
-  console.error("Example: node 7_runIndexing.js ./Data/movies.csv");
+  console.error("Usage: node 7_runIndexing.js <path-to-csv> [limit]");
+  console.error("Example: node 7_runIndexing.js ./Data/movies.csv 5");
   process.exit(1);
 }
 
-runIndexing(csvPath);
+runIndexing(csvPath, limit);

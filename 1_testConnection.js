@@ -29,23 +29,23 @@ async function testConnections() {
     console.error("❌ Pinecone:", err.message);
   }
 
-  // Test 3: Gemini LLM
+  // Test 3: OpenRouter LLM
   try {
-    const response = await llm.invoke("Say 'Gemini Connected!' and nothing else.");
-    console.log("✅ Gemini LLM:", response.content.trim());
+    const response = await llm.invoke("Say 'OpenRouter Connected!' and nothing else.");
+    console.log("✅ OpenRouter LLM:", response.content.trim());
   } catch (err) {
-    console.error("❌ Gemini LLM:", err.message);
+    console.error("❌ OpenRouter LLM:", err.message);
   }
 
-  // Test 4: Gemini Embeddings
+  // Test 4: Hugging Face Embeddings (mxbai-embed-large-v1 → 1024 dims)
   try {
     const vector = await embedText("test");
-    console.log("✅ Gemini Embeddings (text-embedding-004): Dimension =", vector.length);
-    if (vector.length !== 768) {
-      console.warn("   ⚠️ Expected 768 dimensions, got", vector.length);
+    console.log("✅ Hugging Face Embeddings (mxbai-embed-large-v1): Dimension =", vector.length);
+    if (vector.length !== 1024) {
+      console.warn("   ⚠️ Expected 1024 dimensions, got", vector.length);
     }
   } catch (err) {
-    console.error("❌ Gemini Embeddings:", err.message);
+    console.error("❌ Hugging Face Embeddings:", err.message);
   }
 
   await closeConnections();

@@ -37,37 +37,8 @@ export async function POST(req) {
     let movieResults = [];
 
     // 2️⃣ Execute RAG flow based on classification
-    if (classification.type === 'similarity') {
-      console.log(`[API] Executing similarity handler...`);
-      // A) Generate rich conversational LLM recommendation reasons
-      textAnswer = await handleSimilarityQuery(query);
-
-      // B) Query Pinecone for top 10 movies to show as visual cards in UI
-      const queryVector = await embedText(query);
-      const searchResults = await pineconeIndex.query({
-        vector: queryVector,
-        topK: 10,
-        includeMetadata: true,
-      });
-
-      if (searchResults.matches && searchResults.matches.length > 0) {
-        movieResults = searchResults.matches.map((m, idx) => ({
-          id: m.id || idx.toString(),
-          title: m.metadata.title,
-          year: m.metadata.year?.toString() || 'Unknown',
-          match: `${Math.round(m.score * 100)}%`,
-          director: m.metadata.director || 'Unknown',
-          genres: m.metadata.genres || '',
-          themes: m.metadata.themes || '',
-          actors: m.metadata.actors || '',
-        }));
-      }
-    } else if (classification.type === 'descriptive') {
-      console.log(`[API] Executing descriptive handler...`);
-      // A) Generate rich conversational description
-      textAnswer = await handleDescriptiveQuery(query);
-
-      // B) Query Pinecone for top 10 movies related to description
+    if (classification.type === 'similarity' || classification.type === 'descriptive') {
+      console.log(`[API] Executing Pinecone vector match for ${classification.type} query...`);
       const queryVector = await embedText(query);
       const searchResults = await pineconeIndex.query({
         vector: queryVector,

@@ -155,8 +155,8 @@ export function LiquidQueryBox({ className }: { className?: string }) {
         >
           <div className="overflow-hidden space-y-6">
             
-            {/* Glassmorphic AI Text Answer Box */}
-            {textAnswer && (
+            {/* Glassmorphic AI Text Answer Box (Shown only for factual queries when no card results exist) */}
+            {textAnswer && (!results || results.length === 0) && (
               <div className="relative overflow-hidden rounded-2xl bg-white/5 border border-white/10 p-5 md:p-6 shadow-2xl backdrop-blur-md transition-all duration-500 hover:bg-white/10">
                 <div className="flex items-center gap-2 mb-3 text-blue-400 font-semibold tracking-wider text-xs uppercase">
                   <Sparkles className="h-4 w-4 animate-pulse" />

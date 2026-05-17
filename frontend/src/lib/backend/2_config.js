@@ -14,12 +14,12 @@
 // Every other file imports from THIS file.
 // =====================================================================
 
-import dotenv from "dotenv";
+// dotenv is not needed — Next.js auto-loads .env files natively
 import neo4j from "neo4j-driver";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { ChatOpenAI } from "@langchain/openai";
 
-dotenv.config();
+// dotenv.config() removed — Next.js handles this automatically
 
 // =====================================================================
 // 1. NEO4J

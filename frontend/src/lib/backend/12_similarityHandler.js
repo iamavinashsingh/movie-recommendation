@@ -98,11 +98,11 @@ async function handleSimilarityQuery(query) {
     queryVector = await embedText(query);
   }
 
-  // Step 2: Search Pinecone — get 50 candidates (wide net)
-  console.log("   📐 Searching Pinecone (top 50)...");
+  // Step 2: Search Pinecone — get 15 candidates (optimized for serverless speed)
+  console.log("   📐 Searching Pinecone (top 15)...");
   const searchResults = await pineconeIndex.query({
     vector: queryVector,
-    topK: 50,
+    topK: 15,
     includeMetadata: true,
   });
 

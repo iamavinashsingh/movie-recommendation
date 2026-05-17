@@ -24,6 +24,10 @@ export async function POST(req) {
     }
 
     console.log(`\n[API] Received query: "${query}"`);
+    console.log(`[API] Keys Check - OpenRouter: ${process.env.OPENROUTER_API_KEY ? "LOADED (starts with " + process.env.OPENROUTER_API_KEY.substring(0, 8) + ")" : "UNDEFINED"}`);
+    console.log(`[API] Keys Check - Pinecone: ${process.env.PINECONE_API_KEY ? "LOADED" : "UNDEFINED"}`);
+    console.log(`[API] Keys Check - Neo4j: ${process.env.NEO4J_URI ? "LOADED" : "UNDEFINED"}`);
+
 
     // 1️⃣ Run Real classification using LLM
     const classification = await classifyQuery(query);

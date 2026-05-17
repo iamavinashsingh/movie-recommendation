@@ -1,5 +1,5 @@
 // =====================================================================
-// 2_config.js — ALL CONNECTIONS IN ONE PLACE
+// 2_config.js — ALL CONNECTIONS IN ONE PLACE (Lazy Initialization)
 // =====================================================================
 //
 // This file sets up 4 connections:
@@ -11,6 +11,9 @@
 // Model: mixedbread-ai/mxbai-embed-large-v1 (1024 dims, top-ranked free model)
 // Pinecone index must be set to: dimensions=1024, metric=cosine
 //
+// IMPORTANT: All connections are lazily initialized (created on first use).
+// This prevents crashes during Vercel's build phase when env vars are undefined.
+//
 // Every other file imports from THIS file.
 // =====================================================================
 
@@ -19,32 +22,79 @@ import neo4j from "neo4j-driver";
 import { Pinecone } from "@pinecone-database/pinecone";
 import { ChatOpenAI } from "@langchain/openai";
 
-// dotenv.config() removed — Next.js handles this automatically
+// =====================================================================
+// 1. NEO4J — lazy singleton
+// =====================================================================
+let _driver = null;
+function getDriver() {
+  if (!_driver) {
+    _driver = neo4j.driver(
+      process.env.NEO4J_URI,
+      neo4j.auth.basic(process.env.NEO4J_USERNAME, process.env.NEO4J_PASSWORD)
+    );
+  }
+  return _driver;
+}
+
+// Proxy so existing code using `driver.session()` still works
+const driver = new Proxy({}, {
+  get(_, prop) {
+    return getDriver()[prop];
+  }
+});
 
 // =====================================================================
-// 1. NEO4J
+// 2. PINECONE — lazy singleton
 // =====================================================================
-const driver = neo4j.driver(
-  process.env.NEO4J_URI,
-  neo4j.auth.basic(process.env.NEO4J_USERNAME, process.env.NEO4J_PASSWORD)
-);
+let _pinecone = null;
+let _pineconeIndex = null;
+
+function getPinecone() {
+  if (!_pinecone) {
+    _pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
+  }
+  return _pinecone;
+}
+
+// Proxy so existing code using `pineconeIndex.query(...)` still works
+const pineconeIndex = new Proxy({}, {
+  get(_, prop) {
+    if (!_pineconeIndex) {
+      _pineconeIndex = getPinecone().index(process.env.PINECONE_INDEX_NAME);
+    }
+    return _pineconeIndex[prop];
+  }
+});
+
+const pinecone = new Proxy({}, {
+  get(_, prop) {
+    return getPinecone()[prop];
+  }
+});
 
 // =====================================================================
-// 2. PINECONE
+// 3. OPENROUTER LLM (Free Tier) — lazy singleton
 // =====================================================================
-const pinecone = new Pinecone({ apiKey: process.env.PINECONE_API_KEY });
-const pineconeIndex = pinecone.index(process.env.PINECONE_INDEX_NAME);
+let _llm = null;
+function getLLM() {
+  if (!_llm) {
+    _llm = new ChatOpenAI({
+      modelName: "openrouter/free",
+      apiKey: process.env.OPENROUTER_API_KEY,
+      configuration: {
+        baseURL: "https://openrouter.ai/api/v1",
+      },
+      temperature: 0,
+    });
+  }
+  return _llm;
+}
 
-// =====================================================================
-// 3. OPENROUTER LLM (Free Tier)
-// =====================================================================
-const llm = new ChatOpenAI({
-  modelName: "openrouter/free",
-  apiKey: process.env.OPENROUTER_API_KEY,
-  configuration: {
-    baseURL: "https://openrouter.ai/api/v1",
-  },
-  temperature: 0,
+// Proxy so existing code using `llm.invoke(...)` still works
+const llm = new Proxy({}, {
+  get(_, prop) {
+    return getLLM()[prop];
+  }
 });
 
 // =====================================================================
@@ -102,7 +152,10 @@ async function embedTexts(texts) {
 // CLEANUP
 // =====================================================================
 async function closeConnections() {
-  await driver.close();
+  if (_driver) {
+    await _driver.close();
+    _driver = null;
+  }
   console.log("✅ All connections closed.");
 }
 
